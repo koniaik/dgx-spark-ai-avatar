@@ -5,3 +5,4 @@ __pycache__/
 *.pyc
 resource/avatar/*
 !resource/avatar/.gitkeep
+.zcode-hook-boulder.log
