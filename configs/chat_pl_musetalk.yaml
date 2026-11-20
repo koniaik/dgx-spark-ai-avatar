@@ -11,7 +11,7 @@ default:
     concurrent_limit: 1
     handler_search_path:
       - "src/handlers"
-      - "custom_handlers"   # nasze handlery PL
+      - "custom_handlers"   # Polish speech handlers from this repo
     handler_configs:
       RtcClient:
         module: client/rtc_client/client_handler_rtc
@@ -46,13 +46,13 @@ default:
         history_length: 20
         system_prompt: "Jesteś przyjaznym asystentem AI widocznym jako awatar. Odpowiadaj zawsze po polsku, krótko (2-3 zdania), w naturalnym stylu mówionym, z poprawną interpunkcją. Nie używaj markdownu, list ani emoji."
         api_url: "http://127.0.0.1:8888/v1"
-        api_key: "EMPTY"  # set if your LLM server requires a key   # jeśli silnik wymaga klucza, wstaw tutaj
-      # === Awatar: MuseTalk 1.5 z WŁASNEGO wideo ===
-      # Wstaw swój klip (1-5 min, twarz en face, dobre światło) i przy pierwszym
-      # starcie ustaw force_create_avatar: true (preprocessing per-avatar).
+        api_key: "EMPTY"  # set if your LLM endpoint requires a key
+      # === Avatar: MuseTalk 1.5 built from YOUR OWN video ===
+      # Put your clip (1-5 min, face en face, good lighting) here; set
+      # force_create_avatar: true for the first start (per-avatar preprocessing).
       MuseTalk:
         module: avatar/musetalk/avatar_handler_musetalk
-        avatar_video_path: "resource/avatar/moj-awatar.mp4"
+        avatar_video_path: "resource/avatar/your-video.mp4"
         avatar_model_dir: "models/musetalk/avatar_model"
         force_create_avatar: false
         debug: false

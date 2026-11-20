@@ -11,7 +11,7 @@ default:
     concurrent_limit: 1
     handler_search_path:
       - "src/handlers"
-      - "custom_handlers"   # nasze handlery PL
+      - "custom_handlers"   # Polish speech handlers from this repo
     handler_configs:
       RtcClient:
         module: client/rtc_client/client_handler_rtc
@@ -46,16 +46,16 @@ default:
         history_length: 20
         system_prompt: "Jesteś przyjaznym asystentem AI widocznym jako awatar. Odpowiadaj zawsze po polsku, krótko (2-3 zdania), w naturalnym stylu mówionym, z poprawną interpunkcją. Nie używaj markdownu, list ani emoji."
         api_url: "http://127.0.0.1:8888/v1"
-        api_key: "EMPTY"  # set if your LLM server requires a key   # jeśli silnik wymaga klucza, wstaw tutaj
+        api_key: "EMPTY"  # set if your LLM endpoint requires a key
       # === Awatar: SoulX-FlashHead Lite — zero-shot z 1 ZDJĘCIA ===
       # UWAGA: handler wymaga flash-attn (kompilacja na aarch64 lub fallback SDPA) —
-      # etap zaawansowany, startuj dopiero po tym, jak LiteAvatar/MuseTalk działają.
+      # advanced stage: only start this once LiteAvatar/MuseTalk work.
       FlashHead:
         module: avatar/flashhead/avatar_handler_flashhead
         ckpt_dir: "models/SoulX-FlashHead-1_3B"
         wav2vec_dir: "models/wav2vec2-base-960h"
         model_type: "lite"
-        cond_image_path: "resource/avatar/moj-portret.png"   # wstaw swój portret (twarz en face)
+        cond_image_path: "resource/avatar/your-portrait.png"   # your portrait, face en face
         fps: 25
         base_seed: 42
         use_face_crop: false

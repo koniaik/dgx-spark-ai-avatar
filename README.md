@@ -30,7 +30,8 @@ Avatar variants (three example configs, one pipeline):
 
 | Config | Avatar source | Notes |
 |---|---|---|
-| `configs/chat_pl_liteavatar.yaml` | Ready-made sample (LiteAvatar gallery) | **Start here** — works immediately, ~3 GB VRAM, 25 fps |
+| `configs/chat_pl_liteavatar.yaml` | Ready-made sample (LiteAvatar gallery) | **Start here** — works immediately, ~3 GB VRAM, 25 fps, Polish voice |
+| `configs/chat_en_liteavatar.yaml` | Same, but the conversation runs in **English** | en_US Piper voice, English system prompt |
 | `configs/chat_pl_musetalk.yaml` | Your own short video (1–5 min) | MuseTalk 1.5, per-avatar preprocessing on first start |
 | `configs/chat_pl_flashhead.yaml` | Your own photo (zero-shot) | SoulX-FlashHead **Lite** (1.3 B DiT) — advanced: requires building `flash-attn` on aarch64, do this last |
 
@@ -141,6 +142,76 @@ The handlers are registered through OpenAvatarChat's `handler_search_path` mecha
 | `sample_rate` | `24000` | output rate declared to the audio pipeline |
 
 Other voices / better quality: F5-TTS Polish fine-tunes (CC-BY-NC base) or XTTS-v2 (non-commercial license) can be served behind the same OpenAI-compatible `/v1/audio/speech` contract — swapping them is a config change, not a code change.
+
+## Switching the conversation language
+
+The recipe ships with Polish as the default, but every part of the speech path is language-configurable in the yaml — nothing else changes:
+
+| Component | What to change | Coverage |
+|---|---|---|
+| ASR (`SpeachesASR`) | `language: "pl"` → any faster-whisper language code (`"en"`, `"de"`, `"es"`, …). Set it to `""` to let faster-whisper **auto-detect**. | large-v3-turbo covers ~99 languages |
+| TTS (`SpeachesTTS`) | `model_name` → any voice from the Speaches Piper registry; `sample_rate` → that voice's native rate (Piper "medium" voices are typically 22050 Hz) | **38 language packs / 124 voices** verified in the `speaches-ai` Piper registry (2026-11-20) |
+| LLM replies | `system_prompt` → write it in the language you want the avatar to speak | depends on your LLM |
+| Avatar rendering | nothing — the renderer is language-agnostic | — |
+
+Popular Piper voices (id pattern: `speaches-ai/piper-<lang>_<REGION>-<voice>-<quality>`; all verified in the registry):
+
+| Language | Voice id |
+|---|---|
+| Polish | `speaches-ai/piper-pl_PL-darkman-medium`, `speaches-ai/piper-pl_PL-gosia-medium` |
+| English (US) | `speaches-ai/piper-en_US-amy-medium`, `speaches-ai/piper-en_US-ryan-medium`, `speaches-ai/piper-en_US-lessac-high` |
+| English (UK) | `speaches-ai/piper-en_GB-alan-medium` |
+| German | `speaches-ai/piper-de_DE-thorsten-medium` |
+| French | `speaches-ai/piper-fr_FR-gilles-low`, `speaches-ai/piper-fr_FR-mls-medium` |
+| Spanish | `speaches-ai/piper-es_ES-davefx-medium`, `speaches-ai/piper-es_MX-claude-high` |
+| Italian | `speaches-ai/piper-it_IT-paola-medium` |
+| Russian | `speaches-ai/piper-ru_RU-denis-medium` |
+| Ukrainian | `speaches-ai/piper-uk_UA-ukrainian_tts-medium` |
+| Czech / Slovak | `speaches-ai/piper-cs_CZ-jirka-medium`, `speaches-ai/piper-sk_SK-lili-medium` |
+| Chinese (Mandarin) | `speaches-ai/piper-zh_CN-huayan-medium` |
+
+Full list: <https://huggingface.co/speaches-ai> (filter `piper-`), or query the running container. After picking a voice, download it (this Speaches release does not lazy-download):
+
+```bash
+curl -X POST http://127.0.0.1:8000/v1/models/speaches-ai/piper-en_US-amy-medium
+```
+
+The easiest way to test a second language is `configs/chat_en_liteavatar.yaml` — it differs from the Polish one only in `language`, `model_name`/`sample_rate` (TTS) and `system_prompt`.
+
+## Choosing the LLM — local or cloud
+
+The `LLMOpenAICompatible` handler speaks plain OpenAI-compatible `/v1/chat/completions`, so any endpoint of that shape works. Three fields decide everything (`configs-local/chat_pl_*.yaml`, section `LLMOpenAICompatible`):
+
+```yaml
+        model_name: "<model id>"
+        api_url: "<base url ending in /v1>"
+        api_key: "<key; any non-empty string for local servers>"
+```
+
+**Local servers** (no data leaves the machine):
+
+| Server | `api_url` |
+|---|---|
+| vLLM | `http://localhost:8000/v1` |
+| llama.cpp server | `http://localhost:8080/v1` |
+| ollama | `http://localhost:11434/v1` |
+| LM Studio | `http://localhost:1234/v1` |
+
+**Cloud providers** (any OpenAI-compatible API — note the conversation *text* then leaves your machine; the audio path stays local):
+
+| Provider | `api_url` | `model_name` example |
+|---|---|---|
+| OpenAI | `https://api.openai.com/v1` | `gpt-4o-mini` |
+| OpenRouter | `https://openrouter.ai/api/v1` | provider-prefixed id, e.g. `meta-llama/llama-3.3-70b-instruct` |
+| Groq | `https://api.groq.com/openai/v1` | `llama-3.3-70b-versatile` |
+| Mistral | `https://api.mistral.ai/v1` | `mistral-small-latest` |
+| DeepSeek | `https://api.deepseek.com/v1` | `deepseek-chat` |
+| Google Gemini (OpenAI-compat) | `https://generativelanguage.googleapis.com/v1beta/openai/` | `gemini-2.0-flash` |
+
+Notes:
+- `api_key` is **required** by the handler — for local servers without auth put any non-empty string (e.g. `"EMPTY"`). If the field is omitted entirely, the handler falls back to the `DASHSCOPE_API_KEY` environment variable (a legacy OpenAvatarChat default); setting the field explicitly is the recommended path.
+- The example configs live under `configs-local/` (untracked) — never commit real API keys anywhere in the repo.
+- Switching LLM or language requires only an app restart (`./stop.sh && ./start.sh` or the dashboard launcher buttons), not a reinstall.
 
 ## Troubleshooting
 

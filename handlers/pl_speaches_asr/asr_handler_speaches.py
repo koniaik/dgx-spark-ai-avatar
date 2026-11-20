@@ -25,6 +25,8 @@ from chat_engine.data_models.runtime_data.data_bundle import DataBundle, DataBun
 class ASRConfig(HandlerBaseConfigModel, BaseModel):
     base_url: str = Field(default="http://127.0.0.1:8000/v1")
     model_name: str = Field(default="deepdml/faster-whisper-large-v3-turbo-ct2")
+    # Language code for the transcription request, e.g. "pl", "en", "de".
+    # Set to "" to let faster-whisper auto-detect the language.
     language: str = Field(default="pl")
     sample_rate: int = Field(default=16000)
     timeout_seconds: float = Field(default=15.0)
@@ -111,10 +113,13 @@ class HandlerASR(HandlerBase):
             return  # poniżej 250 ms — ignoruj
 
         wav_bytes = _float32_to_wav_bytes(utterance, self.config.sample_rate)
+        form: dict = {"model": self.config.model_name}
+        if self.config.language:  # empty -> faster-whisper auto-detect
+            form["language"] = self.config.language
         try:
             response = self.client.post(
                 f"{self.config.base_url}/audio/transcriptions",
-                data={"model": self.config.model_name, "language": self.config.language},
+                data=form,
                 files={"file": ("speech.wav", wav_bytes, "audio/wav")},
             )
             response.raise_for_status()
