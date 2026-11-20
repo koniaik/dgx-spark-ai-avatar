@@ -190,6 +190,31 @@ curl -X POST http://127.0.0.1:8000/v1/models/speaches-ai/piper-en_US-amy-medium
 
 The easiest way to test a second language is `configs/chat_en_liteavatar.yaml` — it differs from the Polish one only in `language`, `model_name`/`sample_rate` (TTS) and `system_prompt`.
 
+## Choosing the LLM handler — plain vs `extra_body` (thinking control)
+
+Two LLM handlers ship in this repo:
+
+| Handler | Use when |
+|---|---|
+| `LLMOpenAICompatible` (OAC built-in) | plain setups; engine defaults are exactly what you want |
+| `pl_llm_openai` (this repo) | Qwen3.x hybrid-thinking engines (vLLM) where you want **thinking off per request**, without changing engine defaults — plus a saner 120 s timeout for local cold starts |
+
+`pl_llm_openai` adds one config field, passed verbatim to the API:
+
+```yaml
+      PLLLMOpenAI:
+        module: pl_llm_openai/llm_handler_pl_openai
+        api_url: "http://127.0.0.1:8890/v1"
+        api_key: "EMPTY"
+        model_name: "unsloth/Qwen3.6-35B-A3B-NVFP4"
+        extra_body: {"chat_template_kwargs": {"enable_thinking": false}}
+```
+
+Dedicated-engine pattern (what the author runs): a small MoE (Qwen3.6-35B-A3B, ~95 tok/s single
+stream on GB10, ~0.3 s full reply) pinned to its own port purely for the avatar, while the big
+programming engine stays untouched. Mind the unified memory: two big engines don't fit on one
+Spark at once — they swap via the dashboard launchers.
+
 ## Choosing the ASR path — GPU handler vs Speaches container
 
 Two interchangeable ASR handlers ship in this repo (swap one section in the yaml):
