@@ -1,0 +1,40 @@
+# Runtime dependencies of the LiteAvatar algorithm submodule
+# (src/handlers/avatar/liteavatar/algo/liteavatar) that upstream does not declare.
+# Install with:
+#   uv pip install -r scripts/liteavatar_runtime_deps.txt
+#
+# NOTE: do NOT install the submodule's own requirements.txt — it pins
+# torch==2.1.1+cu118 / numpy==1.23.0 and would downgrade the whole environment.
+#
+h5py
+kaldiio
+onnx
+pypinyin
+pyopenjtalk
+matplotlib
+transformers==4.44.2
+yapf
+tensorboardX
+tiktoken
+soundfile
+resampy
+six
+addict
+omegaconf
+jamo
+jaconv
+jieba
+sentencepiece
+pydub
+rotary-embedding-torch
+torch-complex
+oss2
+crcmod
+modelscope  # for the avatar weights download script (see README step 8)
+# typeguard MUST stay on 2.x: the algorithm code calls check_argument_types()
+# against signatures that typeguard >= 4 rejects.
+typeguard==2.13.3
+# torchaudio: no stable aarch64 CUDA build exists; the nightly cu130 index ships
+# aarch64 wheels. Install separately with --no-deps (see README troubleshooting):
+#   uv pip install --no-deps --prerelease=allow \
+#     --index-url https://download.pytorch.org/whl/nightly/cu130 torchaudio

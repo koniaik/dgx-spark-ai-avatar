@@ -1,0 +1,7 @@
+logs/
+models/
+.venv/
+__pycache__/
+*.pyc
+resource/avatar/*
+!resource/avatar/.gitkeep

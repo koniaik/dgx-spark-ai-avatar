@@ -1,0 +1,60 @@
+default:
+  logger:
+    log_level: "INFO"
+  service:
+    host: "0.0.0.0"
+    port: 8899
+    cert_file: "ssl_certs/localhost.crt"
+    cert_key: "ssl_certs/localhost.key"
+  chat_engine:
+    model_root: "models"
+    concurrent_limit: 1
+    handler_search_path:
+      - "src/handlers"
+      - "custom_handlers"   # nasze handlery PL
+    handler_configs:
+      RtcClient:
+        module: client/rtc_client/client_handler_rtc
+        connection_ttl: 900
+      InterruptHandler:
+        module: logic/interrupt/interrupt_handler
+      SileroVad:
+        module: vad/silerovad/vad_handler_silero
+        speaking_threshold: 0.5
+        start_delay: 2048
+        end_delay: 5000
+        buffer_look_back: 5000
+        speech_padding: 512
+      SpeachesASR:
+        enabled: True
+        module: pl_speaches_asr/asr_handler_speaches
+        base_url: "http://127.0.0.1:8000/v1"
+        # id modelu zgodny z tym, co raportuje Speaches: curl http://127.0.0.1:8000/v1/models
+        model_name: "deepdml/faster-whisper-large-v3-turbo-ct2"
+        language: "pl"
+      SpeachesTTS:
+        enabled: True
+        module: pl_speaches_tts/tts_handler_speaches
+        base_url: "http://127.0.0.1:8000/v1"
+        # głos wg listy Speaches (piper pl_PL); weryfikacja przy instalacji
+        model_name: "speaches-ai/piper-pl_PL-darkman-medium"
+        voice: "default"
+        sample_rate: 24000
+      LLMOpenAICompatible:
+        enabled: True
+        module: llm/openai_compatible/llm_handler_openai_compatible
+        # silnik Qwen na tym samym hoście (spark2); model wg curl http://127.0.0.1:8888/v1/models
+        model_name: "your-local-model-id"  # id from your LLM server (GET /v1/models)
+        enable_video_input: False
+        history_length: 20
+        system_prompt: "Jesteś przyjaznym asystentem AI widocznym jako awatar. Odpowiadaj zawsze po polsku, krótko (2-3 zdania), w naturalnym stylu mówionym, z poprawną interpunkcją. Nie używaj markdownu, list ani emoji."
+        api_url: "http://127.0.0.1:8888/v1"
+        api_key: "EMPTY"  # set if your LLM server requires a key   # jeśli silnik wymaga klucza, wstaw tutaj
+      # === Awatar: gotowy sample z galerii LiteAvatar (start natychmiast) ===
+      LiteAvatar:
+        module: avatar/liteavatar/avatar_handler_liteavatar
+        avatar_name: 20250408/sample_data
+        fps: 25
+        debug: false
+        enable_fast_mode: false
+        use_gpu: true
