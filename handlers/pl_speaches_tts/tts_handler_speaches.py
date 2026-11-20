@@ -125,7 +125,12 @@ class HandlerTTS(HandlerBase):
             text = _KEEP_PATTERN.sub("", text)
             context.input_text += text
 
-        text_end = inputs.data.get_meta("avatar_text_end", False)
+        # End-of-text: qwen_omni sets the "avatar_text_end" meta, but
+        # openai_compatible (and others) only finish the stream — which the
+        # engine reports as is_last_data. Accept BOTH signals; without this
+        # the AVATAR_AUDIO stream never closes, LiteAvatar holds the audio
+        # tail and duplex suppresses VAD after the first reply.
+        text_end = inputs.data.get_meta("avatar_text_end", False) or inputs.is_last_data
         if not text_end:
             parts = _SENTENCE_SPLIT.split(context.input_text.strip())
             if len(parts) > 1:

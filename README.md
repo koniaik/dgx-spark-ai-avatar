@@ -226,6 +226,10 @@ Notes:
 | Symptom | Cause / fix |
 |---|---|
 | `uv run install.py` fails on `onnxruntime-gpu` resolution | run `scripts/patch_aarch64.py` first (step 3) |
+| Avatar speaks only the first sentence, then goes silent and stops hearing you | **Root cause found in the wild:** the TTS end-of-text signal. The `avatar_text_end` meta is only set by OAC's `qwen_omni` LLM handler; with `openai_compatible` (or any other LLM) the stream just finishes, which the engine reports as `is_last_data`. Our `SpeachesTTS` accepts **both** signals — if you fork it, keep `get_meta("avatar_text_end", False) or inputs.is_last_data`. Without it the AVATAR_AUDIO stream never closes: LiteAvatar buffers the audio tail (truncated speech) and the duplex logic suppresses VAD until the session restarts |
+| Video works but no avatar audio | check the right-side toolbar speaker toggle (browsers start playback muted — autoplay policy); click anywhere on the page once to unlock audio |
+| `setRemoteDescription: Failed to parse SessionDescription` in the browser console | OAC reorders SDP codecs H264-first, which some browsers reject (duplicates in the SDP answer). Fix: comment out the `_prioritize_h264()` call at the bottom of `src/handlers/client/rtc_client/client_handler_rtc.py` — aiortc's default VP8-first order is universally accepted |
+| Co-located LLM engine fails to start (needs N GiB for streams) | the avatar stack holds a few GiB; lower the engine's parallel-stream setting (e.g. `PARALLEL=4` instead of 5 at a 262k window) or set the avatar's `use_gpu: false` |
 | `Failed to import module asr/speaches/...` | handler directories must not shadow OAC's own top-level packages (`asr`, `tts`); this repo uses `pl_speaches_asr` / `pl_speaches_tts` for exactly that reason |
 | `Error in avatar process: No module named 'pkg_resources'` | setuptools ≥ 81 removes it — keep the patched `<81` pin |
 | `Error in avatar process: No module named 'typeguard'` or `argument "default" (None) is not an instance of str` | LiteAvatar's algorithm targets typeguard 2.x — install `typeguard==2.13.3` (already pinned in `scripts/liteavatar_runtime_deps.txt`) |
