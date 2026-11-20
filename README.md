@@ -19,7 +19,8 @@ Everything runs on-device. No cloud APIs are involved in the speech path.
 ```
 Microphone (browser, WebRTC, HTTPS :8899)
   → SileroVAD
-  → SpeachesASR*  → faster-whisper large-v3-turbo (pl)  [Speaches container, :8000]
+  → WhisperGPU*   → whisper-large-v3-turbo on the GPU (in-process; ~0.2 s)
+     (alternative: SpeachesASR* → faster-whisper in the Speaches container, ~8 s on CPU)
   → LLM (OpenAI-compatible API, e.g. http://127.0.0.1:8888/v1)
   → SpeachesTTS*  → Piper pl_PL voice                   [Speaches container, :8000]
   → Avatar handler → WebRTC video+audio back to the browser
@@ -103,6 +104,9 @@ docker run -d --name speaches --restart unless-stopped \
 
 # 9. download the speech models (this Speaches release does not lazy-download)
 curl -X POST http://127.0.0.1:8000/v1/models/speaches-ai/piper-pl_PL-darkman-medium
+# GPU ASR model (pre-download so the first demo start is fast)
+uv run python -c "from huggingface_hub import snapshot_download; snapshot_download('openai/whisper-large-v3-turbo')"
+# (only if you choose the Speaches ASR handler instead:)
 curl -X POST http://127.0.0.1:8000/v1/models/deepdml/faster-whisper-large-v3-turbo-ct2
 
 # 10. point the configs at your LLM (api_url / model_name / api_key in
@@ -185,6 +189,22 @@ curl -X POST http://127.0.0.1:8000/v1/models/speaches-ai/piper-en_US-amy-medium
 ```
 
 The easiest way to test a second language is `configs/chat_en_liteavatar.yaml` — it differs from the Polish one only in `language`, `model_name`/`sample_rate` (TTS) and `system_prompt`.
+
+## Choosing the ASR path — GPU handler vs Speaches container
+
+Two interchangeable ASR handlers ship in this repo (swap one section in the yaml):
+
+| Handler | Where it runs | Measured latency (short utterance, DGX Spark) | Notes |
+|---|---|---|---|
+| `pl_whisper_gpu` (default) | in-process, **GPU** (the torch nightly cu130 already installed by the aarch64 patch) | **~0.15–0.7 s** | loads `openai/whisper-large-v3-turbo` fp16 (~3 GiB VRAM); set `language: ""` for auto-detect |
+| `pl_speaches_asr` | Speaches container, **CPU** | **~8 s** | zero extra VRAM; useful when the GPU is fully booked |
+
+Note: the `speaches:latest-cuda` image runs fine on GB10 but its faster-whisper stays on CPU —
+the aarch64 CTranslate2 wheels are CPU-only builds (verified: `ctranslate2.get_cuda_device_count() == 0`).
+
+End-to-end effect measured in production (end of user speech → avatar starts speaking,
+with the default stack): **13.7 s → 3.3–3.9 s**, dominated afterwards by LLM TTFT;
+disabling the engine's thinking mode (if it is dedicated to the avatar) trims another ~0.5–1.5 s.
 
 ## Choosing the LLM — local or cloud
 
