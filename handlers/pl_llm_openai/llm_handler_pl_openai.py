@@ -91,6 +91,7 @@ class HandlerLLM(HandlerBase, ABC):
         }
         return HandlerDetail(
             inputs=inputs,
+            outputs=outputs,
             signal_filters=[
                 SignalFilterRule(ChatSignalType.STREAM_CANCEL, None, None)
             ]
