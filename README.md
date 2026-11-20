@@ -86,6 +86,14 @@ cd src/handlers/avatar/liteavatar/algo/liteavatar
 PATH="$OLDPWD/.venv/bin:$PATH" bash download_model.sh
 cd - >/dev/null
 
+# 7b. self-signed certificate — upstream ships NO certs; without these the
+#     service silently falls back to plain HTTP, and browsers refuse
+#     microphone access (getUserMedia) on non-secure origins
+openssl req -x509 -newkey rsa:2048 -sha256 -days 825 -nodes \
+  -keyout ssl_certs/localhost.key -out ssl_certs/localhost.crt \
+  -subj "/CN=<spark-ip>" \
+  -addext "subjectAltName=IP:<spark-ip>,DNS:localhost"
+
 # 8. Speaches — one container = ASR + TTS (arm64 image)
 mkdir -p ~/speaches-cache
 docker run -d --name speaches --restart unless-stopped \
@@ -225,7 +233,8 @@ Notes:
 | `No such file or directory: './weights/.../model.pb'` | step 7 — run `download_model.sh` from inside `algo/liteavatar/` with the main venv's `bin` on PATH (do **not** run it with `uv run` from the submodule: its own `pyproject.toml` pins x86-only `onnxruntime-gpu` and uv would build a broken venv there) |
 | `Model '...' is not installed locally` from Speaches | download explicitly: `curl -X POST http://127.0.0.1:8000/v1/models/<model_id>` (this release does not lazy-download) |
 | Whisper model id unknown | list available ids: the Speaches whisper registry exposes HF repos such as `Systran/faster-whisper-large-v3` or `deepdml/faster-whisper-large-v3-turbo-ct2` |
-| Browser microphone blocked | the UI must be served over HTTPS (self-signed cert → accept the warning); plain HTTP is fine only from `localhost` |
+| Browser microphone blocked / `ERR_SSL_PROTOCOL_ERROR` on `https://` | check the startup log: if it says `Uvicorn running on http://` there is no cert — the upstream repo ships an **empty** `ssl_certs/` directory (only a placeholder file) and the service silently falls back to plain HTTP. Generate one (Quick start step 7b), restart, and expect `SSL enabled.` + `Uvicorn running on https://` in the log. Plain HTTP is only usable from `localhost`, which a LAN IP never is |
+| Server log: `Cert file ... not found` warning at startup | same as above — the cert files were not generated |
 | x86-only Docker images won't run | GB10 Docker runs arm64 images only (e.g. NVIDIA ACE NIMs and Duix.Avatar images are amd64-only — dead ends on this hardware) |
 | Triton `ptxas` from CUDA 12.x doesn't know sm_121 | point `TRITON_PTXAS_PATH` at CUDA 13's `ptxas` |
 
