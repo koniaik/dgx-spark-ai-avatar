@@ -129,6 +129,20 @@ The handlers are registered through OpenAvatarChat's `handler_search_path` mecha
 | nightly torch pins `triton==3.9.0+git<hash>`, which exists nowhere for cp311 | `override-dependencies = ["triton==3.9.0"]` (PyPI has an aarch64 wheel; irrelevant without `torch.compile`) |
 | uv's universal lock also resolves for darwin, where no onnxruntime satisfies the pin | restrict `tool.uv.environments` to `linux && aarch64` |
 
+## Ambient-noise / echo hardening
+
+Two validated tweaks ship in this repo:
+
+1. **Browser voice processing** — upstream requests the mic with
+   `noiseSuppression`/`autoGainControl` disabled; ambient noise (robot vacuum, fans) then
+   reaches SileroVAD, gets transcribed into single-word hallucinations and the LLM answers
+   them. Fix: run `python3 scripts/enable_voice_processing.py .`
+2. **Tuned VAD thresholds** (already in the example configs): `speaking_threshold: 0.7`,
+   `start_delay: 4096`, `volume_threshold: -32` — cuts the echo of the avatar's own voice
+   triggering a reply. If it starts missing YOUR speech, back off to `0.65`.
+
+The surest anti-echo fix remains physical: headphones.
+
 ## Service scripts
 
 `scripts/start.sh` starts the Speaches container, waits for it to answer, then launches the demo in its own process group with a pidfile (never `pkill -f` over SSH — it self-matches). `scripts/stop.sh` reverses it, with a port-based fallback. Both were exercised through a dashboard launcher (start/stop buttons) during validation.
