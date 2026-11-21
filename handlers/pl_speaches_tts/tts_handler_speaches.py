@@ -85,7 +85,7 @@ class HandlerTTS(HandlerBase):
         return TTSContext(session_context.session_info.session_id)
 
     def start_context(self, session_context, context: HandlerContext):
-        # warmup: pusta próba nie może wywalić sesji, tylko zalogować problem
+        # warmup: an empty attempt must not kill the session, only log the problem
         try:
             self._synthesize("Test.")
         except Exception as error:
