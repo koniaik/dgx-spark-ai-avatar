@@ -166,36 +166,32 @@ class HandlerLLM(HandlerBase, ABC):
             context.active_stream_keys.add(stream_key)
         cancelled = False
         try:
+            # Non-streaming: the SSE streaming path under the loaded chat engine
+            # intermittently corrupted multi-byte UTF-8 at chunk boundaries
+            # ("Cześć!" -> "Cze!", "pełni" -> "pelni"). A full JSON response is
+            # parsed atomically and cannot lose characters; the latency cost
+            # (~0.3-0.5 s for a short reply) is acceptable for a voice avatar.
+            if stream_key and stream_key not in context.active_stream_keys:
+                cancelled = True
             completion = context.client.chat.completions.create(
                 model=context.model_name,
                 messages=[
                     context.system_prompt,
                 ] + current_content,
-                stream=True,
-                stream_options={"include_usage": True},
+                stream=False,
                 extra_body=context.extra_body or None,
             )
             context.current_image = None
             context.input_texts = ''
             context.output_texts = ''
-            for chunk in completion:
-                if stream_key and stream_key not in context.active_stream_keys:
-                    cancelled = True
-                    try:
-                        completion.close()
-                    except Exception:
-                        pass
-                    break
-                if (chunk and chunk.choices and chunk.choices[0] and chunk.choices[0].delta.content):
-                    output_text = chunk.choices[0].delta.content
-                    context.output_texts += output_text
-                    logger.info(output_text)
-                    output = DataBundle(output_definition)
-                    output.set_main_data(output_text)
-                    streamer.stream_data(output)
             if not cancelled:
+                output_text = (completion.choices[0].message.content or "")
+                context.output_texts = output_text
+                output = DataBundle(output_definition)
+                output.set_main_data(output_text)
+                streamer.stream_data(output)
                 context.history.add_message(HistoryMessage(role="human", content=chat_text))
-                context.history.add_message(HistoryMessage(role="avatar", content=context.output_texts))
+                context.history.add_message(HistoryMessage(role="avatar", content=output_text))
         except Exception as e:
             logger.error(e)
             if isinstance(e, APIStatusError):
