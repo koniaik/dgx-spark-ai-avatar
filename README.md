@@ -67,7 +67,7 @@ git submodule update --init --depth 1 \
 cp -r /path/to/this-repo/handlers ./custom_handlers
 cp -r /path/to/this-repo/configs ./configs-local
 cp /path/to/this-repo/scripts/start.sh /path/to/this-repo/scripts/stop.sh .
-chmod +x start.sh stop.sh
+chmod +x start.sh stop.sh   # NOTE: cp does not preserve the exec bit — don't skip this
 
 # 3. aarch64 patches (onnxruntime, nightly cu130 torch, triton override — see below)
 python3 /path/to/this-repo/scripts/patch_aarch64.py .
@@ -286,6 +286,7 @@ Notes:
 |---|---|
 | `uv run install.py` fails on `onnxruntime-gpu` resolution | run `scripts/patch_aarch64.py` first (step 3) |
 | Polish diacritics vanish from replies ("Cześć!"→"Cze!", "pełni"→"pelni") — in chat AND in speech | **root cause found 2026-11-21:** OAC's `chat_history_manager.filter_text()` keeps only ASCII+CJK and deletes every Polish (or German/French…) diacritic from the user's text and history BEFORE the request reaches the LLM; the model then echoes diacritic-less text. Fix: run `python3 scripts/fix_polish_filter.py .` (keeps all Unicode word characters, still strips emoji). This one bug caused truncated-looking speech, weird spoken words and the "different versions" of answers between chat and voice |
+| `UnboundLocalError: cannot access local variable 'cancelled'` after an LLM connection error | upstream bug in the built-in `openai_compatible` LLM handler (variable is read after the except block without being initialized). Harmless to this recipe: our handlers initialize the flag first. If you use the built-in handler, initialize `cancelled = False` before its try block |
 | Avatar speaks only the first sentence, then goes silent and stops hearing you | **Root cause found in the wild:** the TTS end-of-text signal. The `avatar_text_end` meta is only set by OAC's `qwen_omni` LLM handler; with `openai_compatible` (or any other LLM) the stream just finishes, which the engine reports as `is_last_data`. Our `SpeachesTTS` accepts **both** signals — if you fork it, keep `get_meta("avatar_text_end", False) or inputs.is_last_data`. Without it the AVATAR_AUDIO stream never closes: LiteAvatar buffers the audio tail (truncated speech) and the duplex logic suppresses VAD until the session restarts |
 | Video works but no avatar audio | check the right-side toolbar speaker toggle (browsers start playback muted — autoplay policy); click anywhere on the page once to unlock audio |
 | `setRemoteDescription: Failed to parse SessionDescription` in the browser console | OAC reorders SDP codecs H264-first, which some browsers reject (duplicates in the SDP answer). Fix: run `python3 scripts/disable_h264_priority.py .` (or comment out the `_prioritize_h264()` call at the bottom of `src/handlers/client/rtc_client/client_handler_rtc.py`) — aiortc's default VP8-first order is universally accepted |

@@ -5,7 +5,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG="${1:-$ROOT/configs-local/chat_pl_liteavatar.yaml}"
+CONFIG="${1:-$ROOT/configs-local/chat_en_liteavatar.yaml}"
 LOG_DIR="$ROOT/logs"
 PIDFILE="$LOG_DIR/demo.pid"
 mkdir -p "$LOG_DIR"
