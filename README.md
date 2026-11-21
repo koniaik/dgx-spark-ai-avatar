@@ -1,6 +1,6 @@
-# Polish AI Avatar on NVIDIA DGX Spark
+# Local AI Avatar on NVIDIA DGX Spark
 
-A fully local, real-time talking avatar that **speaks Polish** on a single NVIDIA DGX Spark (GB10: aarch64, CUDA 13, Blackwell sm_121, 128 GB unified memory).
+A fully local, real-time talking avatar on a single NVIDIA DGX Spark (GB10: aarch64, CUDA 13, Blackwell sm_121, 128 GB unified memory). **English is the default conversation language**; any other language (Polish, German, …) is a three-line config change — see *Switching the conversation language*.
 
 The stack wires together three open-source projects:
 
@@ -12,7 +12,7 @@ The stack wires together three open-source projects:
 
 Everything runs on-device. No cloud APIs are involved in the speech path.
 
-> Status: this exact sequence of steps was executed end-to-end on a DGX Spark (GB10) on 2026-11-20 — ASR, TTS, the LiteAvatar rendering worker and the web UI all run; the speech path is fully Polish. OpenAvatarChat's built-in ASR/TTS handlers do not support Polish (SenseVoice covers zh/en/ja/ko/yue only), so this repo adds two small custom handlers (`handlers/`) that call a Speaches server instead.
+> Status: this exact sequence of steps was executed end-to-end on a DGX Spark (GB10) on 2026-11-20/21 — ASR, TTS, the LiteAvatar rendering worker and the web UI all run; the default speech path is English, Polish and other languages are config-only switches. OpenAvatarChat's built-in ASR/TTS handlers do not support Polish (SenseVoice covers zh/en/ja/ko/yue only), so this repo adds two small custom handlers (`handlers/`) that call a Speaches server instead.
 
 ## Architecture
 
@@ -31,10 +31,10 @@ Avatar variants (three example configs, one pipeline):
 
 | Config | Avatar source | Notes |
 |---|---|---|
-| `configs/chat_pl_liteavatar.yaml` | Ready-made sample (LiteAvatar gallery) | **Start here** — works immediately, ~3 GB VRAM, 25 fps, Polish voice |
-| `configs/chat_en_liteavatar.yaml` | Same, but the conversation runs in **English** | en_US Piper voice, English system prompt |
-| `configs/chat_pl_musetalk.yaml` | Your own short video (1–5 min) | MuseTalk 1.5, per-avatar preprocessing on first start |
-| `configs/chat_pl_flashhead.yaml` | Your own photo (zero-shot) | SoulX-FlashHead **Lite** (1.3 B DiT) — advanced: requires building `flash-attn` on aarch64, do this last |
+| `configs/chat_en_liteavatar.yaml` | Ready-made sample (LiteAvatar gallery) | **Start here** — works immediately, ~3 GB VRAM, 25 fps, English voice |
+| `configs/chat_en_musetalk.yaml` | Your own short video (1–5 min) | MuseTalk 1.5, per-avatar preprocessing on first start |
+| `configs/chat_en_flashhead.yaml` | Your own photo (zero-shot) | SoulX-FlashHead **Lite** (1.3 B DiT) — advanced: requires building `flash-attn` on aarch64, do this last |
+| `configs/chat_pl_*.yaml` | Same variants with a **Polish** voice/prompt | Example of switching language (see below) |
 
 Resource budget: the whole stack fits in roughly 6–10 GB of the 128 GB unified memory, leaving plenty of room for a co-located LLM server.
 
@@ -73,7 +73,7 @@ chmod +x start.sh stop.sh
 python3 /path/to/this-repo/scripts/patch_aarch64.py .
 
 # 4. dependencies + handler models (downloads torch nightly cu130 aarch64 etc.)
-uv run install.py --config configs-local/chat_pl_liteavatar.yaml
+uv run install.py --config configs-local/chat_en_liteavatar.yaml
 
 # 5. undeclared runtime deps of the LiteAvatar algorithm submodule
 uv pip install -r /path/to/this-repo/scripts/liteavatar_runtime_deps.txt
@@ -163,7 +163,7 @@ The surest anti-echo fix remains physical: headphones.
 | Field | Default | Meaning |
 |---|---|---|
 | `base_url` | `http://127.0.0.1:8000/v1` | Speaches API base |
-| `model_name` | `speaches-ai/piper-pl_PL-darkman-medium` | Piper voice repo (registry shape: `speaches-ai/piper-<lang>_<REGION>-<voice>-<quality>`) |
+| `model_name` | `speaches-ai/piper-en_US-amy-medium` | Piper voice repo (registry shape: `speaches-ai/piper-<lang>_<REGION>-<voice>-<quality>`) |
 | `voice` | `default` | required (non-empty) by the API; Piper derives the voice from the model |
 | `sample_rate` | `24000` | output rate declared to the audio pipeline |
 
@@ -171,7 +171,7 @@ Other voices / better quality: F5-TTS Polish fine-tunes (CC-BY-NC base) or XTTS-
 
 ## Switching the conversation language
 
-The recipe ships with Polish as the default, but every part of the speech path is language-configurable in the yaml — nothing else changes:
+English is the default. Every part of the speech path is language-configurable in the yaml — nothing else changes:
 
 | Component | What to change | Coverage |
 |---|---|---|
@@ -202,7 +202,7 @@ Full list: <https://huggingface.co/speaches-ai> (filter `piper-`), or query the 
 curl -X POST http://127.0.0.1:8000/v1/models/speaches-ai/piper-en_US-amy-medium
 ```
 
-The easiest way to test a second language is `configs/chat_en_liteavatar.yaml` — it differs from the Polish one only in `language`, `model_name`/`sample_rate` (TTS) and `system_prompt`.
+The easiest way to try another language is copying an example: `configs/chat_pl_*.yaml` differ from the English ones only in `language`, `model_name`/`sample_rate` (TTS) and `system_prompt`.
 
 ## Choosing the LLM handler — plain vs `extra_body` (thinking control)
 

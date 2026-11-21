@@ -1,0 +1,63 @@
+default:
+  logger:
+    log_level: "INFO"
+  service:
+    host: "0.0.0.0"
+    port: 8899
+    cert_file: "ssl_certs/localhost.crt"
+    cert_key: "ssl_certs/localhost.key"
+  chat_engine:
+    model_root: "models"
+    concurrent_limit: 1
+    handler_search_path:
+      - "src/handlers"
+      - "custom_handlers"   # Polish speech handlers from this repo
+    handler_configs:
+      RtcClient:
+        module: client/rtc_client/client_handler_rtc
+        connection_ttl: 900
+      InterruptHandler:
+        module: logic/interrupt/interrupt_handler
+      SileroVad:
+        module: vad/silerovad/vad_handler_silero
+        speaking_threshold: 0.7
+        start_delay: 4096
+        end_delay: 5000
+        buffer_look_back: 5000
+        speech_padding: 512
+      SpeachesASR:
+        enabled: True
+        module: pl_speaches_asr/asr_handler_speaches
+        base_url: "http://127.0.0.1:8000/v1"
+        model_name: "deepdml/faster-whisper-large-v3-turbo-ct2"
+        language: "en"
+      SpeachesTTS:
+        enabled: True
+        module: pl_speaches_tts/tts_handler_speaches
+        base_url: "http://127.0.0.1:8000/v1"
+        model_name: "speaches-ai/piper-en_US-amy-medium"
+        voice: "default"
+        sample_rate: 22050
+      LLMOpenAICompatible:
+        enabled: True
+        module: llm/openai_compatible/llm_handler_openai_compatible
+        model_name: "your-local-model-id"  # id from your LLM server (GET /v1/models)
+        enable_video_input: False
+        history_length: 20
+        system_prompt: "You are a friendly AI assistant visible as an avatar. Always answer in English, keep it short (2-3 sentences), in a natural spoken style with correct punctuation. Do not use markdown, lists or emoji."
+        api_url: "http://127.0.0.1:8888/v1"
+        api_key: "EMPTY"  # set if your LLM endpoint requires a key
+      # === Awatar: SoulX-FlashHead Lite — zero-shot z 1 ZDJĘCIA ===
+      # UWAGA: handler wymaga flash-attn (kompilacja na aarch64 lub fallback SDPA) —
+      # advanced stage: only start this once LiteAvatar/MuseTalk work.
+      FlashHead:
+        module: avatar/flashhead/avatar_handler_flashhead
+        ckpt_dir: "models/SoulX-FlashHead-1_3B"
+        wav2vec_dir: "models/wav2vec2-base-960h"
+        model_type: "lite"
+        cond_image_path: "resource/avatar/your-portrait.png"   # your portrait, face en face
+        fps: 25
+        base_seed: 42
+        use_face_crop: false
+        debug: false
+        idle_noise_amplitude: 0.003

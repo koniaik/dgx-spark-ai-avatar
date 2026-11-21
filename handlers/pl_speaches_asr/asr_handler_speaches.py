@@ -27,7 +27,7 @@ class ASRConfig(HandlerBaseConfigModel, BaseModel):
     model_name: str = Field(default="deepdml/faster-whisper-large-v3-turbo-ct2")
     # Language code for the transcription request, e.g. "pl", "en", "de".
     # Set to "" to let faster-whisper auto-detect the language.
-    language: str = Field(default="pl")
+    language: str = Field(default="en")
     sample_rate: int = Field(default=16000)
     timeout_seconds: float = Field(default=15.0)
 

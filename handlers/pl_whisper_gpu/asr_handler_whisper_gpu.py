@@ -26,7 +26,7 @@ from chat_engine.data_models.runtime_data.data_bundle import DataBundle, DataBun
 class ASRConfig(HandlerBaseConfigModel, BaseModel):
     model_name: str = Field(default="openai/whisper-large-v3-turbo")
     # ISO code ("pl"); "" lets whisper auto-detect the language
-    language: str = Field(default="pl")
+    language: str = Field(default="en")
     sample_rate: int = Field(default=16000)
 
 
