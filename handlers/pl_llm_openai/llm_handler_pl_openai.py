@@ -168,7 +168,7 @@ class HandlerLLM(HandlerBase, ABC):
         try:
             # Non-streaming: the SSE streaming path under the loaded chat engine
             # intermittently corrupted multi-byte UTF-8 at chunk boundaries
-            # ("Cześć!" -> "Cze!", "pełni" -> "pelni"). A full JSON response is
+            # ("Czes??!" -> "Cze!", "pelni" instead of "pel?ni"). A full JSON response is
             # parsed atomically and cannot lose characters; the latency cost
             # (~0.3-0.5 s for a short reply) is acceptable for a voice avatar.
             if stream_key and stream_key not in context.active_stream_keys:

@@ -1,7 +1,7 @@
-"""TTS handler dla OpenAvatarChat: synteza przez serwer Speaches (OpenAI-compatible /v1/audio/speech).
-
-Domyślnie Piper (ONNX, CPU) z głosem pl_PL — niska latencja, licencja MIT.
-Struktura wzorowana na handlers/tts/edgetts (split per zdanie + finish_stream).
+"""TTS handler for OpenAvatarChat: synthesis via a Speaches server
+(OpenAI-compatible /v1/audio/speech). Default voice is English (Piper,
+ONNX on CPU, low latency, MIT). Patterned after handlers/tts/edgetts
+(per-sentence split + finish_stream). For other languages change model_name/voice.
 """
 
 import io
@@ -25,7 +25,7 @@ from chat_engine.data_models.runtime_data.data_bundle import DataBundle, DataBun
 
 class TTSConfig(HandlerBaseConfigModel, BaseModel):
     base_url: str = Field(default="http://127.0.0.1:8000/v1")
-    # Identyfikator głosu wg dokumentacji Speaches (potwierdź curl {base_url}/models przy instalacji)
+    # Voice id as documented by Speaches (confirm with curl {base_url}/models at install time)
     model_name: str = Field(default="rhasspy/piper-voices")
     voice: str = Field(default="pl_PL-darkman-medium")
     sample_rate: int = Field(default=22050)
@@ -33,7 +33,8 @@ class TTSConfig(HandlerBaseConfigModel, BaseModel):
     min_sentence_length: int = Field(default=2)
 
 
-# litery PL + znaki typowe dla mowy; wycinamy markdown/emoji/znaki specjalne
+# keep word characters of any script (Polish diacritics included) + speech punctuation;
+# strip markdown/emoji/special symbols
 _KEEP_PATTERN = re.compile(
     r"[^a-zA-ZąćęłńóśźżĄĆĘŁŃÓŚŹŻ0-9\s,.\-–—:;!?…()%\"']"
 )
@@ -88,7 +89,7 @@ class HandlerTTS(HandlerBase):
         try:
             self._synthesize("Test.")
         except Exception as error:
-            logger.warning(f"SpeachesTTS warmup failed (czy Speaches działa?): {error}")
+            logger.warning(f"SpeachesTTS warmup failed (is Speaches running?): {error}")
 
     def _synthesize(self, sentence: str) -> np.ndarray:
         response = self.client.post(
@@ -101,7 +102,7 @@ class HandlerTTS(HandlerBase):
             },
         )
         response.raise_for_status()
-        # dekoduj WAV i przeskaluj do zadeklarowanego sample_rate (definicja DataBundle jest stała)
+        # decode the WAV and resample to the declared sample_rate (DataBundle definition is fixed)
         audio, _ = librosa.load(io.BytesIO(response.content), sr=self.config.sample_rate, mono=True)
         return audio
 

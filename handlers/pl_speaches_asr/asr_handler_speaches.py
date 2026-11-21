@@ -1,7 +1,7 @@
-"""ASR handler dla OpenAvatarChat: transkrypcja przez serwer Speaches (OpenAI-compatible /v1/audio/transcriptions).
-
-Domyślnie Parakeet TDT 0.6B v3 (polski, zweryfikowany WER 7,31% Fleurs) lub faster-whisper.
-Uruchamiany po stronie OAC przez handler_search_path -> custom_handlers.
+"""ASR handler for OpenAvatarChat: transcription via a Speaches server
+(OpenAI-compatible /v1/audio/transcriptions). Any faster-whisper model works;
+defaults target English (set language:"" for auto-detect).
+Loaded through OAC's handler_search_path -> custom_handlers.
 """
 
 import io
@@ -39,7 +39,7 @@ class ASRContext(HandlerContext):
 
 
 def _float32_to_wav_bytes(audio: np.ndarray, sample_rate: int) -> bytes:
-    """Mono float32 [-1, 1] -> 16-bit PCM WAV w pamięci."""
+    """Mono float32 [-1, 1] -> 16-bit PCM WAV in memory."""
     audio = np.clip(audio.squeeze(), -1.0, 1.0)
     pcm = (audio * 32767.0).astype(np.int16)
     buffer = io.BytesIO()
@@ -110,7 +110,7 @@ class HandlerASR(HandlerBase):
         utterance = np.concatenate(context.audio_chunks)
         context.audio_chunks.clear()
         if utterance.shape[0] < self.config.sample_rate // 4:
-            return  # poniżej 250 ms — ignoruj
+            return  # below 250 ms — ignore
 
         wav_bytes = _float32_to_wav_bytes(utterance, self.config.sample_rate)
         form: dict = {"model": self.config.model_name}
